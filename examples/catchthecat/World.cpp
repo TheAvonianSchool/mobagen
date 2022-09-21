@@ -9,7 +9,8 @@ void World::print() {
     std::cout << ((i == catposid) ? ('C') : (worldState[i] ? '#' : '.'));
     i++;
     if ((i + sideSize) % (2 * sideSize) == 0)
-      std::cout << std::endl << " ";
+      std::cout << std::endl
+                << " ";
     else if (i % sideSize == 0)
       std::cout << std::endl;
     else
@@ -108,7 +109,7 @@ void World::OnDraw(SDL_Renderer* renderer) {
       t.position.x += 2 * t.scale.x;
   }
 
-  Polygon::DrawLine(renderer, {0, 0}, {5, 5}, Color::Green);
+  Polygon::DrawLine(renderer, {0, 0}, {100, 100}, Color::Green);
 }
 
 void World::OnGui(ImGuiContext* context) {
@@ -132,6 +133,8 @@ void World::OnGui(ImGuiContext* context) {
     ImGui::Text("Turn: CAT");
   else
     ImGui::Text("Turn: CATCHER");
+  ImGui::Text("Cat position: (%d, %d)", catPosition.x, catPosition.y);
+  ImGui::Text("Last wall position: (%d, %d)", catcherLastPosition.x, catcherLastPosition.y);
   ImGui::Text("Move duration: %lli", moveDuration);
   ImGui::Text("Next turn in %.1f", timeForNextTick);
   if (ImGui::Button("Randomize")) {
@@ -177,13 +180,11 @@ void World::step() {
     catPosition = move;
   } else {
     auto move = catcher->Move(this);
-    worldState[move.y * (sideSize / 2) + move.x + sideSize * sideSize / 2] =
-        true;
+    catcherLastPosition = move;
+    worldState[move.y * (sideSize / 2) + move.x + sideSize * sideSize / 2] = true;
   }
   auto stop = std::chrono::high_resolution_clock::now();
-  moveDuration =
-      std::chrono::duration_cast<std::chrono::microseconds>(stop - start)
-          .count();
+  moveDuration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
   // change turn
   catTurn = !catTurn;
 }

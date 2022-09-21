@@ -1,25 +1,23 @@
 #include "Cat.h"
 #include "World.h"
-#include <stdexcept>
 
 Point2D Cat::Move(World* world) {
+  auto catPos = world->getCat();
 
-  auto rand = Random::Range(0,5);
-  auto pos = world->getCat();
-  switch(rand){
-    case 0:
-      return World::NE(pos);
-    case 1:
-      return World::NW(pos);
-    case 2:
-      return World::E(pos);
-    case 3:
-      return World::W(pos);
-    case 4:
-      return World::SW(pos);
-    case 5:
-      return World::SE(pos);
-    default:
-      throw "random out of range";
+  auto bestMoves = pathfinder.aStar(catPos, world);
+  if(bestMoves.has_value()) {
+    if(bestMoves->top() == Pathfinder::TARGET_GOAL) {
+      // cat win temp
+      return {0, 0};
+    }
+    // the first move will always be the current position
+    bestMoves->pop();
+    return bestMoves->top();
   }
+  // cat destination: 999, 999
+  // cat win: 999, -999
+  // cat lose: -999, -999
+
+  // no moves cat can make (cat lose)
+  return {-999, -999};
 }

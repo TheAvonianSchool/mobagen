@@ -16,6 +16,7 @@ class World : GameObject {
   float timeForNextTick = 1;
   bool catTurn = true;
   bool isSimulating = false;
+  Point2D catcherLastPosition = Point2D(0, 0);
   Point2D catPosition = Point2D(0, 0);
   int64_t moveDuration = 0;
 
