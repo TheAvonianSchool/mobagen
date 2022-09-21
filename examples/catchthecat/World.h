@@ -19,6 +19,8 @@ class World : GameObject {
   Point2D catcherLastPosition = Point2D(0, 0);
   Point2D catPosition = Point2D(0, 0);
   int64_t moveDuration = 0;
+  bool catWon = false;
+  bool catcherWon = false;
 
   Cat* cat;
   Catcher* catcher;
@@ -39,6 +41,18 @@ class World : GameObject {
 
   // clears the world
   void clearWorld();
+
+  // check if cat won
+  bool catWinVerification();
+
+  // check if catcher won
+  bool catcherWinVerification();
+
+  // check if cat can move to the position required
+  bool catCanMoveToPosition(Point2D pos);
+
+  // check if catcher can move to the position required
+  bool catcherCanMoveToPosition(Point2D pos);
 
  public:
   explicit World(Engine* pEngine, int size = 11);
@@ -65,8 +79,8 @@ class World : GameObject {
 
   // the top left (x,y) is (-5,-5) the center is on (0,0);
   // get the content of a given
-  bool getContent(const int8_t& x, const int8_t& y) {
-    return worldState[(y + sideSize / 2) * (sideSize) + x + sideSize / 2];
+  bool getContent(const int& x, const int& y) {
+    return worldState[(y+sideSize/2)*(sideSize) + x + sideSize/2];
   }
 
   // print the world state

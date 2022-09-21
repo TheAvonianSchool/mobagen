@@ -37,6 +37,8 @@ void World::clearWorld() {
   isSimulating = false;
   catTurn = true;
   timeForNextTick = timeBetweenAITicks;
+  catWon = false;
+  catcherWon = false;
 }
 
 Point2D World::E(const Point2D& p) { return {p.x + 1, p.y}; }
@@ -80,36 +82,33 @@ bool World::isNeighbor(const Point2D& p1, const Point2D& p2) {
 }
 
 void World::OnDraw(SDL_Renderer* renderer) {
-  Hexagon hex;
-  Transform t;
+    Hexagon hex;
+    Transform t;
+    auto windowSize = engine->window->size();
+    float minSide = std::min(windowSize.x, windowSize.y);
+    t.scale *= (minSide / sideSize)/2;
 
-  auto windowSize = engine->window->size();
-  float minSide = std::min(windowSize.x, windowSize.y);
-  t.scale *= (minSide / sideSize) / 2;
-
-  t.position = {windowSize.x / 2 - (sideSize)*t.scale.x,
-                windowSize.y / 2 - (sideSize - 1) * t.scale.y};
-  auto catposid = (catPosition.y + sideSize / 2) * (sideSize) + catPosition.x +
-                  sideSize / 2;
-  for (int i = 0; i < worldState.size();) {
-    if (catposid == i)
-      hex.Draw(renderer, t, Color::Red);
-    else if (worldState[i])
-      hex.Draw(renderer, t, Color::Blue);
-    else
-      hex.Draw(renderer, t, Color::Gray);
-    i++;
-    if ((i) % (2 * sideSize) == 0) {
-      t.position.x = windowSize.x / 2 - (sideSize)*t.scale.x;
-      t.position.y += 2 * t.scale.y;
-    } else if (i % sideSize == 0) {
-      t.position.x = windowSize.x / 2 - (sideSize)*t.scale.x + t.scale.x;
-      t.position.y += 2 * t.scale.y;
-    } else
-      t.position.x += 2 * t.scale.x;
-  }
-
-  Polygon::DrawLine(renderer, {0, 0}, {100, 100}, Color::Green);
+    t.position = {windowSize.x/2 - (sideSize)*t.scale.x, windowSize.y/2 - (sideSize-1)*t.scale.y};
+    auto catposid = (catPosition.y + sideSize/2)*(sideSize) + catPosition.x + sideSize/2;
+    for (int i = 0; i < worldState.size();) {
+      if(catposid==i)
+        hex.Draw(renderer, t, Color::Red);
+      else if(worldState[i])
+        hex.Draw(renderer, t, Color::Blue);
+      else
+        hex.Draw(renderer, t, Color::Gray);
+      i++;
+      if ((i) % (2 * sideSize) == 0) {
+        t.position.x = windowSize.x / 2 - (sideSize)*t.scale.x;
+        t.position.y += 2*t.scale.y;
+      }
+      else if (i % sideSize == 0) {
+        t.position.x = windowSize.x / 2 - (sideSize)*t.scale.x + t.scale.x;
+        t.position.y += 2*t.scale.y;
+      }
+      else
+        t.position.x += 2*t.scale.x;
+    }
 }
 
 void World::OnGui(ImGuiContext* context) {
@@ -131,29 +130,41 @@ void World::OnGui(ImGuiContext* context) {
   }
   if (catTurn)
     ImGui::Text("Turn: CAT");
-  else
-    ImGui::Text("Turn: CATCHER");
-  ImGui::Text("Cat position: (%d, %d)", catPosition.x, catPosition.y);
-  ImGui::Text("Last wall position: (%d, %d)", catcherLastPosition.x, catcherLastPosition.y);
-  ImGui::Text("Move duration: %lli", moveDuration);
-  ImGui::Text("Next turn in %.1f", timeForNextTick);
-  if (ImGui::Button("Randomize")) {
-    clearWorld();
-  }
-  ImGui::Text("Simulation");
-  if (ImGui::Button("Step")) {
-    isSimulating = false;
-    step();
-  }
-  ImGui::SameLine();
-  if (ImGui::Button("Start")) {
-    isSimulating = true;
-  }
-  ImGui::SameLine();
-  if (ImGui::Button("Pause")) {
-    isSimulating = false;
-  }
-  ImGui::End();
+    else
+        ImGui::Text("Turn: CATCHER");
+    ImGui::Text("Move duration: %lli", moveDuration);
+    ImGui::Text("Next turn in %.1f", timeForNextTick);
+    if(ImGui::Button("Randomize")){
+      clearWorld();
+    }
+    ImGui::Text("Simulation");
+    if(ImGui::Button("Step")) {
+      isSimulating = false;
+      step();
+    }
+    ImGui::SameLine();
+    if(ImGui::Button("Start")) {
+      isSimulating = true;
+    }
+    ImGui::SameLine();
+    if(ImGui::Button("Pause")) {
+      isSimulating = false;
+    }
+    ImGui::End();
+
+    if((catcherWon || catWon)) {
+      ImGuiIO& io = ImGui::GetIO();
+      ImVec2 pos(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
+      ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+      ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove
+                               | ImGuiWindowFlags_AlwaysAutoResize
+                               | ImGuiWindowFlags_NoSavedSettings;
+      if (ImGui::Begin("Game Over", nullptr, flags)) {
+        if (ImGui::Button("OK", ImVec2(200, 0))) {
+          clearWorld();
+        }
+      }
+    }
 }
 
 void World::Update(float deltaTime) {
@@ -162,8 +173,6 @@ void World::Update(float deltaTime) {
     timeForNextTick -= deltaTime;
     if (timeForNextTick < 0) {
       step();
-
-      // update turn
       timeForNextTick = timeBetweenAITicks;
     }
   }
@@ -172,20 +181,69 @@ void World::Update(float deltaTime) {
 Point2D World::getCat() { return catPosition; }
 
 void World::step() {
+  if(catWon || catcherWon) {
+    clearWorld();
+    return;
+  }
+
   auto start = std::chrono::high_resolution_clock::now();
 
   // run the turn
   if (catTurn) {
     auto move = cat->Move(this);
-    catPosition = move;
-  } else {
+    if(catCanMoveToPosition(move)) {
+      catPosition = move;
+      catWon = catWinVerification();
+    }
+    else {
+      isSimulating = false;
+      catcherWon = true; // cat made a bad move
+    }
+  }
+  else {
     auto move = catcher->Move(this);
-    catcherLastPosition = move;
-    worldState[move.y * (sideSize / 2) + move.x + sideSize * sideSize / 2] = true;
+    if(catcherCanMoveToPosition(move)) {
+      worldState[(move.y + sideSize / 2) * (sideSize) + move.x + sideSize / 2] =
+          true;
+      catcherWon = catcherWinVerification();
+      catcherLastPosition = move;
+    } else {
+      isSimulating = false;
+      catWon = true; // catcher made a bad move
+    }
+    
   }
   auto stop = std::chrono::high_resolution_clock::now();
   moveDuration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
   // change turn
   catTurn = !catTurn;
 }
-int World::getWorldSideSize() const { return sideSize; }
+
+int World::getWorldSideSize() {
+  return sideSize;
+}
+
+bool World::catWinVerification() {
+  auto sideOver2 = sideSize/2;
+  return abs(catPosition.x) == sideOver2 || abs(catPosition.y) == sideOver2;
+}
+
+bool World::catcherWinVerification() {
+  return getContent(NE(catPosition)) &&
+         getContent(NW(catPosition)) &&
+         getContent(E(catPosition)) &&
+         getContent(W(catPosition)) &&
+         getContent(SE(catPosition)) &&
+         getContent(SW(catPosition));
+}
+
+bool World::catCanMoveToPosition(Point2D p) {
+  return isNeighbor(catPosition, p) && !getContent(p);
+}
+bool World::catcherCanMoveToPosition(Point2D p) {
+  auto sideOver2 = sideSize/2;
+  return p.x!=catPosition.x &&
+         p.y!=catPosition.y &&
+         abs(p.x) <= sideOver2 &&
+         abs(p.y) <= sideOver2;
+}
