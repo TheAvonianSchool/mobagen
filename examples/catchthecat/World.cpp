@@ -219,7 +219,7 @@ void World::step() {
   catTurn = !catTurn;
 }
 
-int World::getWorldSideSize() {
+int World::getWorldSideSize() const {
   return sideSize;
 }
 
