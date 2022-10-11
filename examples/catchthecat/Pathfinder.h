@@ -38,10 +38,7 @@ template <
     class Compare = std::less<typename Container::value_type>>
 class PriorityQueue : public std::priority_queue<T, Container, Compare> {
  public:
-  typedef typename std::priority_queue<
-      T,
-      Container,
-      Compare>::container_type::const_iterator const_iterator;
+  using const_iterator = typename std::priority_queue<T, Container, Compare>::container_type::const_iterator;
 
   explicit PriorityQueue(const Compare& pred)
       : std::priority_queue<T, Container, Compare>(pred) {}

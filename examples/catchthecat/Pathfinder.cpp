@@ -18,12 +18,32 @@ std::optional<std::stack<Point2D>> Pathfinder::aStar(Point2D start, World* world
 
   bool visualize = renderer != nullptr;
 
+
+
+
   // this doesn't account for diagonals but that can be fixed with more spaghetti
+
 
   auto heuristicFunction = [world](Point2D point) -> int {
     int edge = world->getWorldSideSize() / 2;
+    const int TOLERANCE = 4;
 
-    return edge - abs(abs(point.x) > abs(point.y) ? point.x : point.y);
+    int weight = 0;
+
+    for(int i = -TOLERANCE; i <= TOLERANCE; ++i) {
+      for(int j = -TOLERANCE; j <= TOLERANCE; ++j) {
+        auto newPoint = Point2D(i + point.x, j + point.y);
+        if(!world->isValidPosition(newPoint)) {
+          continue;
+        }
+
+        if(world->getContent(newPoint)) {
+          ++weight;
+        }
+      }
+    }
+
+    return edge - abs(abs(point.x) > abs(point.y) ? point.x : point.y) + weight;
   };
 
   auto compareHeuristics = [heuristicFunction](Point2D point, Point2D other) -> bool {
