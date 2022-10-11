@@ -48,14 +48,9 @@ class World : GameObject {
   // check if catcher won
   bool catcherWinVerification();
 
-  // check if cat can move to the position required
-  bool catCanMoveToPosition(Point2D pos);
-
-  // check if catcher can move to the position required
-  bool catcherCanMoveToPosition(Point2D pos);
-
  public:
-  explicit World(Engine* pEngine, int size = 11);
+  explicit World(Engine* pEngine, int size=11);
+  explicit World(Engine* pEngine, int size, bool catTurn, Point2D cat, std::vector<bool> world);
 
   // directions
   static Point2D NE(const Point2D& p);
@@ -73,13 +68,13 @@ class World : GameObject {
 
   // the top left (x,y) is (-side/2,-side/2) the center is on (0,0);
   // get the content of a given point
-  bool getContent(const Point2D& p) {
-    return worldState[(p.y + sideSize / 2) * (sideSize) + p.x + sideSize / 2];
+  bool getContent(const Point2D& p) const {
+    return worldState[(p.y+sideSize/2)*(sideSize) + p.x + sideSize/2];
   }
 
   // the top left (x,y) is (-5,-5) the center is on (0,0);
   // get the content of a given
-  bool getContent(const int& x, const int& y) {
+  bool getContent(const int& x, const int& y) const {
     return worldState[(y+sideSize/2)*(sideSize) + x + sideSize/2];
   }
 
@@ -96,6 +91,15 @@ class World : GameObject {
   void Update(float deltaTime) override;
 
   void step();
+
+  // check if cat can move to the position required
+  bool catCanMoveToPosition(Point2D pos) const;
+
+  // check if catcher can move to the position required
+  bool catcherCanMoveToPosition(Point2D pos) const;
+
+  //returns true if cat wins on the given space
+  bool catWinsOnSpace(Point2D point);
 };
 
 #endif  // WORLD_H

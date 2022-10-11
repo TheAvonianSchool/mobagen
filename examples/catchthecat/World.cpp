@@ -71,14 +71,13 @@ bool World::isValidPosition(const Point2D& p) {
          (p.y >= -sideOver2);
 }
 
-bool World::isNeighbor(const Point2D& p1, const Point2D& p2) {
-  if (p1.y == p2.y) return p1.x - p2.x == 1;
-  auto delta = abs(p1.y - p2.y);
-  if (delta != 1) return false;
-  if (p1.y % 2 == 0)
-    return p1.x == p2.x || p2.x == p1.x - 1;
-  else
-    return p1.x == p2.x || p2.x == p1.x + 1;
+bool World::isNeighbor(const Point2D &p1, const Point2D &p2) {
+  return NE(p1) == p2 ||
+         NW(p1) == p2 ||
+         E(p1) == p2 ||
+         W(p1) == p2 ||
+         SE(p1) == p2 ||
+         SW(p1) == p2;
 }
 
 void World::OnDraw(SDL_Renderer* renderer) {
@@ -89,6 +88,11 @@ void World::OnDraw(SDL_Renderer* renderer) {
     t.scale *= (minSide / sideSize)/2;
 
     t.position = {windowSize.x/2 - (sideSize)*t.scale.x, windowSize.y/2 - (sideSize-1)*t.scale.y};
+    if (sideSize % 4 >= 2)
+    {
+        t.position.x += t.scale.x;
+    }
+
     auto catposid = (catPosition.y + sideSize/2)*(sideSize) + catPosition.x + sideSize/2;
     for (int i = 0; i < worldState.size();) {
       if(catposid==i)
@@ -99,11 +103,11 @@ void World::OnDraw(SDL_Renderer* renderer) {
         hex.Draw(renderer, t, Color::Gray);
       i++;
       if ((i) % (2 * sideSize) == 0) {
-        t.position.x = windowSize.x / 2 - (sideSize)*t.scale.x;
+        t.position.x = windowSize.x / 2 - (sideSize)*t.scale.x + (sideSize % 4 >= 2 ? 1 : 0) * t.scale.x;
         t.position.y += 2*t.scale.y;
       }
       else if (i % sideSize == 0) {
-        t.position.x = windowSize.x / 2 - (sideSize)*t.scale.x + t.scale.x;
+        t.position.x = windowSize.x / 2 - (sideSize)*t.scale.x + (sideSize % 4 <= 1 ? 1 : 0) * t.scale.x;
         t.position.y += 2*t.scale.y;
       }
       else
@@ -237,13 +241,24 @@ bool World::catcherWinVerification() {
          getContent(SW(catPosition));
 }
 
-bool World::catCanMoveToPosition(Point2D p) {
+bool World::catCanMoveToPosition(Point2D p) const {
   return isNeighbor(catPosition, p) && !getContent(p);
 }
-bool World::catcherCanMoveToPosition(Point2D p) {
+bool World::catcherCanMoveToPosition(Point2D p) const {
   auto sideOver2 = sideSize/2;
-  return p.x!=catPosition.x &&
-         p.y!=catPosition.y &&
+  return (p.x!=catPosition.x ||
+         p.y!=catPosition.y) &&
          abs(p.x) <= sideOver2 &&
          abs(p.y) <= sideOver2;
+}
+
+World::World(Engine* pEngine, int size, bool catTurn, Point2D catPos, std::vector<bool> world): GameObject(pEngine), sideSize(size), catTurn(catTurn), catPosition(catPos), worldState(std::move(world))  {
+  cat = new Cat();
+  catcher = new Catcher();
+}
+
+bool World::catWinsOnSpace(Point2D point)
+{
+    auto sideOver2 = sideSize / 2;
+    return abs(point.x) == sideOver2 || abs(point.y) == sideOver2;
 }
